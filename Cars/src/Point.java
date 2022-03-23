@@ -1,17 +1,26 @@
 public class Point {
+    int type;
+    Point next;
+    boolean moved = false;
+    public int acc;
 
-    // TODO
 
-    public void move() {
-        // TODO
+    public void move(int cnt) {
+        if(this.type == 1 && !this.moved){
+            next.acc = cnt;
+            this.type = 0;
+            next.type = 1;
+            this.moved = true;
+            next.moved = true;
+        }
     }
 
     public void clicked() {
-        // TODO
+        this.type = 1;
     }
 
     public void clear() {
-        // TODO
+        this.type = 0;
     }
 }
 
