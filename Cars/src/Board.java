@@ -4,14 +4,15 @@ import java.awt.*;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
-import java.util.Random;
 
 public class Board extends JComponent implements MouseInputListener, ComponentListener {
     private static final long serialVersionUID = 1L;
     private Point[][] points;
-    private int size = 10;
+    private boolean[][] isBack;
+    private int size = 25;
     public int editType = 0;
-    double p = 0.3;
+    protected int leftLane;
+    protected int rightLane;
 
     public Board(int length, int height) {
         addMouseListener(this);
@@ -22,70 +23,158 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
     }
 
     private void initialize(int length, int height) {
-        points = new Point[length][height];
+        this.points = new Point[length][height];
+        this.isBack = new boolean[length][height];
+        this.leftLane = (points[0].length / 2) - 1;
+        this.rightLane = (points[0].length / 2);
         for (int x = 0; x < points.length; ++x) {
             for (int y = 0; y < points[x].length; ++y) {
-                points[x][y] = new Point();
-                points[x][y].acc = 0;
+                this.points[x][y] = new Point();
+                if(y == leftLane || y == rightLane ){
+                    points[x][y].type = 0;
+                }else{
+                    points[x][y].type = 5;
+                }
             }
         }
         for (int x = 0; x < points.length; ++x) {
             for (int y = 0; y < points[x].length; ++y) {
-                if(x == points.length - 1){
-                    points[x][y].next = points[0][y];
-                }else{
-                    points[x][y].next = points[x+1][y];
+                if(y == leftLane || y == rightLane){
+                    if(y == leftLane){
+                        points[x][y].right = points[x][y+1];
+                        points[x][y].left = null;
+                    }else{
+                        points[x][y].left = points[x][y-1];
+                        points[x][y].right = null;
+                    }
+                    if(x == points.length - 1){
+                        points[x][y].next = points[0][y];
+                    }else{
+                        points[x][y].next = points[x+1][y];
+                    }
                 }
             }
         }
     }
 
+
+    boolean canOvertake(int x, int y){
+        return y == rightLane && points[x][y].acc < points[x][y].maxAcc
+                && isAllPrevFree(x, leftLane, 7) && isAllPrevFree(x, rightLane, 7)
+                && isNextFree(x, leftLane, points[x][y].acc) && points[x][y].left.type == 0;
+    }
+
+    boolean canGoBack(int x, int y){
+        return y == leftLane
+                && isAllPrevFree(x, leftLane, 7) && isAllPrevFree(x, rightLane, 7)
+                && isAllNextFree(x, rightLane, points[x][y].acc) && points[x][y].right.type == 0;
+    }
+
+
     public void iteration() {
+//      preparing cars for moving
         for (int x = 0; x < points.length; ++x) {
             for (int y = 0; y < points[x].length; ++y) {
                 points[x][y].moved = false;
-                if(points[x][y].type == 1 && points[x][y].acc < 5){
+                isBack[x][y] = false;
+                if(points[x][y].isACar() && points[x][y].acc < points[x][y].maxAcc){
                     points[x][y].acc ++;
                 }
-                if(points[x][y].type == 1 && points[x][y].acc >= 1  && Math.random() <= p){
-                    points[x][y].acc --;
+            }
+        }
+//      moving cars
+        for (int x = 0; x < points.length; ++x) {
+            for (int y = 0; y < points[x].length; ++y) {
+                if (points[x][y].isACar() && !points[x][y].moved && canGoBack(x, y)) {
+                    points[x][y].goBack();
+                    isBack[x][y] = true;
                 }
             }
         }
         for (int x = 0; x < points.length; ++x) {
             for (int y = 0; y < points[x].length; ++y) {
-                if(points[x][y].type == 1 && !points[x][y].moved){
-                    int counter = 0;
-                    for (int i = 1; i <= points[x][y].acc; i++){
-                        if(x+i < points.length && points[x+i][y].type == 0) {
-                            counter++;
-                        }
-                        else{
-                            break;
-                        }
-                    }
-                    if(x + counter >= points.length - 1){
-                        points[x][y].next = points[counter - (points.length - 1 - x)][y];
-                    }else{
-                        points[x][y].next = points[x+counter][y];
-                    }
-                    points[x][y].move(counter);
+                if (points[x][y].isACar() && !points[x][y].moved && canOvertake(x, y) && !isBack[x][y]) {
+                    points[x][y].overtake();
                 }
-
             }
         }
-
+        for (int x = 0; x < points.length; ++x) {
+            for (int y = 0; y < points[x].length; ++y) {
+                if (points[x][y].isACar() && !points[x][y].moved) {
+                    moveForward(x, y);
+                }
+            }
+        }
         this.repaint();
+    }
+
+
+    void moveForward(int x, int y){
+        int counter = 0;
+        for (int i = 1; i <= points[x][y].acc; i++){
+            if(isNextFree(x, y, i)) {
+                counter++;
+            }
+            else{
+                break;
+            }
+        }
+        if(counter != 0){
+            if(x + counter >= points.length - 1){
+                points[x][y].next = points[counter - (points.length - 1 - x)][y];
+            }else{
+                points[x][y].next = points[x + counter][y];
+            }
+            points[x][y].move(counter);
+        }else{
+            points[x][y].stay();
+        }
+
+    }
+
+    boolean isNextFree(int x, int y, int cnt){
+        if(x + cnt < points.length && points[x+cnt][y].type == 0) {
+            return true;
+        }else if(x + cnt < points.length && points[x+cnt][y].type != 0){
+            return false;
+        }else return x + cnt >= points.length && points[cnt - (points.length - 1 - x)][y].type == 0;
+    }
+
+    boolean isAllNextFree(int x, int y, int cnt) {
+        for (int i = 1; i <= cnt; i++) {
+            if(!isNextFree(x, y, i)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    boolean isPrevFree(int x, int y, int cnt) {
+        if (x - cnt >= 0 && points[x - cnt][y].type == 0) {
+            return true;
+        } else if (x - cnt >= 0 && points[x - cnt][y].type != 0) {
+            return false;
+        } else return x - cnt < 0 && points[points.length - cnt + x][y].type == 0;
+    }
+
+    boolean isAllPrevFree(int x, int y, int cnt) {
+        for (int i = 1; i <= cnt; i++) {
+            if(!isPrevFree(x, y, i)){
+                return false;
+            }
+        }
+        return true;
     }
 
     public void clear() {
         for (int x = 0; x < points.length; ++x)
             for (int y = 0; y < points[x].length; ++y) {
-                points[x][y].clear();
+                if(y == points[x].length / 2 || y ==  - 1 + (points[x].length / 2)){
+                    points[x][y].clear();
+                }
             }
         this.repaint();
     }
-
 
     protected void paintComponent(Graphics g) {
         if (isOpaque()) {
@@ -117,11 +206,13 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
         for (x = 0; x < points.length; ++x) {
             for (y = 0; y < points[x].length; ++y) {
+                switch(points[x][y].type){
+                    case 0: g.setColor(Color.WHITE); break;
+                    case 1: g.setColor(Color.YELLOW); break;
+                    case 2: g.setColor(Color.BLUE); break;
+                    case 3: g.setColor(Color.RED); break;
+                    case 5: g.setColor(Color.GREEN); break;
 
-                if(points[x][y].type == 1){
-                    g.setColor(Color.BLACK);
-                }else{
-                    g.setColor(Color.WHITE);
                 }
                 g.fillRect((x * size) + 1, (y * size) + 1, (size - 1), (size - 1));
             }
@@ -133,8 +224,16 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
         int x = e.getX() / size;
         int y = e.getY() / size;
         if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
-            if (editType == 0) {
+            if(editType == 0){
                 points[x][y].clicked();
+            }
+            else {
+                points[x][y].type = editType;
+                switch(points[x][y].type){
+                    case 1: points[x][y].maxAcc = 3; points[x][y].acc = 3; break;
+                    case 2: points[x][y].maxAcc = 5; points[x][y].acc = 5; break;
+                    case 3: points[x][y].maxAcc = 7; points[x][y].acc = 7; break;
+                }
             }
             this.repaint();
         }
@@ -150,8 +249,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
         int x = e.getX() / size;
         int y = e.getY() / size;
         if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
-            if (editType == 0) {
+            if(editType == 0){
                 points[x][y].clicked();
+            }
+            else {
+                points[x][y].type = editType;
             }
             this.repaint();
         }
