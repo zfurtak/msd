@@ -29,11 +29,18 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	public void iteration() {
 		for (int x = 1; x < points.length - 1; ++x){
 			for (int y = 1; y < points[x].length - 1; ++y){
-				points[x][y].move();
+				points[x][y].blocked = false;
 			}
-			this.repaint();
 		}
 
+		for (int x = 1; x < points.length - 1; ++x){
+			for (int y = 1; y < points[x].length - 1; ++y){
+				if(!points[x][y].blocked){
+					points[x][y].move();
+				}
+			}
+		}
+		this.repaint();
 	}
 
 	public void clear() {
@@ -47,9 +54,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 
 	private void initialize(int length, int height) {
 		points = new Point[length][height];
-		for (int x = 0; x < points.length; ++x)
-			for (int y = 0; y < points[x].length; ++y)
+		for (int x = 0; x < points.length; ++x){
+			for (int y = 0; y < points[x].length; ++y) {
 				points[x][y] = new Point();
+			}
+		}
 
 		for (int x = 1; x < points.length-1; ++x) {
 			for (int y = 1; y < points[x].length-1; ++y) {
@@ -79,8 +88,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		while(!toCheck.isEmpty()){
 			Point tmp = toCheck.get(0);
 			if(tmp.calcStaticField()){
-				toCheck.addAll(tmp.neighbors);
-
+				for(Point nei: tmp.neighbors){
+					if(nei.type != 1){
+						toCheck.add(nei);
+					}
+				}
 			}
 			toCheck.remove(0);
 		}
@@ -143,11 +155,11 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 		int x = e.getX() / size;
 		int y = e.getY() / size;
 		if ((x < points.length) && (x > 0) && (y < points[x].length) && (y > 0)) {
-			if(editType==3){
-				points[x][y].isPedestrian=true;
+			if(editType == 3){
+				points[x][y].isPedestrian = true;
 			}
 			else{
-				points[x][y].type= editType;
+				points[x][y].type = editType;
 			}
 			this.repaint();
 		}
@@ -167,7 +179,7 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 				points[x][y].isPedestrian=true;
 			}
 			else{
-				points[x][y].type= editType;
+				points[x][y].type = editType;
 			}
 			this.repaint();
 		}

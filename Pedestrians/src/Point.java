@@ -7,11 +7,13 @@ public class Point {
 	public int type;
 	public int staticField;
 	public boolean isPedestrian;
+	boolean blocked = false;
+
 
 	public Point() {
-		type=0;
+		type = 0;
 		staticField = 100000;
-		neighbors= new ArrayList<Point>();
+		neighbors = new ArrayList<Point>();
 	}
 	
 	public void clear() {
@@ -21,10 +23,9 @@ public class Point {
 
 	public boolean calcStaticField() {
 		int initial_value = this.staticField;
-		for(Point neig : this.neighbors){
-			if(this.staticField > neig.staticField + 1){
-				this.staticField = neig.staticField + 1;
-
+		for(Point nei : this.neighbors){
+			if(this.staticField > nei.staticField + 1){
+				this.staticField = nei.staticField + 1;
 			}
 		}
 		return initial_value != this.staticField;
@@ -39,7 +40,7 @@ public class Point {
 					next = nei;
 					break;
 				}
-				if(nei.type == 0 && nei.staticField < mini){
+				if(nei.type == 0 && nei.staticField < mini && !nei.blocked){
 					mini = nei.staticField;
 					next = nei;
 				}
@@ -49,6 +50,8 @@ public class Point {
 					next.type = this.type;
 					next.isPedestrian = true;
 				}
+				this.blocked = true;
+				next.blocked = true;
 				this.isPedestrian = false;
 				this.type = 0;
 			}
