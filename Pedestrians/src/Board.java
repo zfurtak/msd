@@ -5,7 +5,6 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import javax.swing.JComponent;
 import javax.swing.event.MouseInputListener;
@@ -77,13 +76,29 @@ public class Board extends JComponent implements MouseInputListener, ComponentLi
 	
 	private void calculateField(){
 		ArrayList<Point> toCheck = new ArrayList<Point>();
+		ArrayList<Point> aroundWalls = new ArrayList<Point>();
 		for (int x = 1; x < points.length - 1; ++x) {
 			for (int y = 1; y < points[x].length - 1; ++y) {
 				if(points[x][y].type == 2){
 					points[x][y].staticField = 0;
 					toCheck.addAll(points[x][y].neighbors);
 				}
+				if(points[x][y].type == 1){
+					points[x][y].fromWall = 6;
+					aroundWalls.addAll(points[x][y].neighbors);
+				}
 			}
+		}
+		while(!aroundWalls.isEmpty()){
+			Point tmp = aroundWalls.get(0);
+			if(tmp.calcFromWall()){
+				for(Point nei: tmp.neighbors){
+					if(nei.type != 1){
+						aroundWalls.add(nei);
+					}
+				}
+			}
+			aroundWalls.remove(0);
 		}
 		while(!toCheck.isEmpty()){
 			Point tmp = toCheck.get(0);

@@ -8,6 +8,7 @@ public class Point {
 	public int staticField;
 	public boolean isPedestrian;
 	boolean blocked = false;
+	int fromWall = 0;
 
 
 	public Point() {
@@ -21,11 +22,21 @@ public class Point {
 		
 	}
 
+	public boolean calcFromWall() {
+		int initial_value = this.fromWall;
+		for(Point nei : this.neighbors){
+			if(this.fromWall < nei.fromWall - 1){
+				this.fromWall = nei.fromWall - 1;
+			}
+		}
+		return initial_value != this.fromWall;
+	}
+
 	public boolean calcStaticField() {
 		int initial_value = this.staticField;
 		for(Point nei : this.neighbors){
 			if(this.staticField > nei.staticField + 1){
-				this.staticField = nei.staticField + 1;
+				this.staticField = nei.staticField + 1 + this.fromWall;
 			}
 		}
 		return initial_value != this.staticField;
